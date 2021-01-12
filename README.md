@@ -2,7 +2,9 @@
 
 This code is heavily borrowed from [PaDiM-Anomaly-Detection-Localization-master]([url](https://github.com/xiahaifeng1995/PaDiM-Anomaly-Detection-Localization-master)).
 
-<img src="./result.png" width="50%">
+<img src="sample_results/leather.png" width="100%">
+<img src="sample_results/capsule.png" width="100%">
+<img src="sample_results/metal_nut.png" width="100%">
 
 
 ## Setup
