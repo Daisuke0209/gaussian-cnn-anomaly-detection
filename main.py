@@ -41,7 +41,7 @@ def main():
 
     os.makedirs(os.path.join(args.save_path, 'temp_%s' % args.arch), exist_ok=True)
 
-    class_name = 'bottle-small'
+    class_name = 'liberaware'
     data_path = args.data_path
     save_path = args.save_path
     arch = args.arch
@@ -58,10 +58,10 @@ def main():
 
     test_imgs = []
     # extract test set features
-    for (x, _, _) in test_dataloader:
+    for (x, _) in test_dataloader:
         test_imgs.extend(x.cpu().detach().numpy())
 
-    plot_fig(test_imgs, scores, num = 0)
+    plot_fig(test_imgs, scores, num = 50)
 
 
 #     # calculate image-level ROC AUC score

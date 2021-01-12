@@ -50,7 +50,7 @@ class GaussianCnnPredictor():
         train_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
 
         # extract train set features
-        for (x, _, _) in tqdm(dataloader, '| feature extraction |'):
+        for (x, _) in tqdm(dataloader, '| feature extraction |'):
             # model prediction
             with torch.no_grad():
                 _ = self.model(x.to(self.device))
@@ -59,6 +59,7 @@ class GaussianCnnPredictor():
                 train_outputs[k].append(v.cpu().detach())
             # initialize hook outputs
             self.outputs = []
+        
         for k, v in train_outputs.items():
             train_outputs[k] = torch.cat(v, 0)
 
@@ -72,7 +73,6 @@ class GaussianCnnPredictor():
          # randomly select d dimension
         embedding_vectors = torch.index_select(embedding_vectors, 1, self.idx)
         # calculate multivariate Gaussian distribution
-        print(embedding_vectors.size())
         B, C, H, W = embedding_vectors.size()
         embedding_vectors = embedding_vectors.view(B, C, H * W)
 
