@@ -1,6 +1,9 @@
 # gaussian-cnn-anomaly-detection
 
-Original github is https://github.com/xiahaifeng1995/PaDiM-Anomaly-Detection-Localization-master.
+This code is heavily borrowed from [PaDiM-Anomaly-Detection-Localization-master]([url](https://github.com/xiahaifeng1995/PaDiM-Anomaly-Detection-Localization-master)).
+
+<img src="./result.png" width="50%">
+
 
 ## Setup
 
@@ -16,3 +19,9 @@ poetry run pip install --upgrade pip
 poetry install
 ```
 `.venv` directory is created in this project directory and installed Python and packages.
+
+## Run model
+Please run below.
+```
+poetry run python main.py
+```

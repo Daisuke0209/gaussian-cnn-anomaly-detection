@@ -12,8 +12,10 @@ import torchvision
 from torchvision.models import wide_resnet50_2, resnet18
 
 class GaussianCnnPredictor():
+    """
+    This class detect anomaly in input image using Cnn and Gaussian
+    """
     def __init__(self, arch: str):
-        
         # device setup
         self.use_cuda = torch.cuda.is_available()
         self.device = torch.device('cuda' if self.use_cuda else 'cpu')
@@ -47,6 +49,19 @@ class GaussianCnnPredictor():
         self.model.layer3[-1].register_forward_hook(hook)
 
     def get_embedding(self, dataloader: DataLoader):
+        """get_embedding
+        get embeddings as image feature using pretrained CNN
+
+        Parameters
+        -------
+        dataloader : DataLoader
+            Dataset to get embeddings
+
+        Returns
+        -------
+        embedding_vectors : torch.Tensor
+            embedding vectors using pretrained CNN
+        """
         train_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
 
         # extract train set features
@@ -76,9 +91,19 @@ class GaussianCnnPredictor():
         B, C, H, W = embedding_vectors.size()
         embedding_vectors = embedding_vectors.view(B, C, H * W)
 
+        print(type(embedding_vectors))
+
         return embedding_vectors, B, C, H, W
 
     def fit(self, dataloader: DataLoader):
+        """fit
+        fit function. get features of inuput dataset
+
+        Parameters
+        -------
+        dataloader : DataLoader
+            Dataset to get embeddings
+        """
         print("fit start")
         embedding_vectors, B, C, H, W = self.get_embedding(dataloader)
         print("got embedding")
@@ -93,6 +118,19 @@ class GaussianCnnPredictor():
         self.train_outputs = [mean, cov]
 
     def predict(self, dataloader: DataLoader):
+        """predict
+        predict function. get heatmap of inuput dataset
+
+        Parameters
+        -------
+        dataloader : DataLoader
+            Dataset to get embeddings
+
+        Returns
+        -------
+        heatmaps : np.array
+            heatmap for anomaly level
+        """
         print("predict start")
         embedding_vectors, B, C, H, W = self.get_embedding(dataloader)
         print("got embedding")
@@ -125,6 +163,21 @@ class GaussianCnnPredictor():
 
 
 def embedding_concat(x, y):
+    """embedding_concat
+    Combine the two inputs
+
+    Parameters
+    -------
+    x : torch.Tensor
+        input tensor
+    y : torch.Tensor
+        input tensor
+
+    Returns
+    -------
+    z : torch.Tensor
+        output tensor
+    """
     B, C1, H1, W1 = x.size()
     _, C2, H2, W2 = y.size()
     s = int(H1 / H2)

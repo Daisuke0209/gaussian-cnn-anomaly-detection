@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 from torch.utils.data import DataLoader
 from module.model import GaussianCnnPredictor
+from module.tools import get_bbx, denormalization
 import datasets.mvtec as mvtec
 
 
@@ -37,11 +38,9 @@ def main():
 
     args = parse_args()
 
-    model = GaussianCnnPredictor(arch = args.arch)
-
     os.makedirs(os.path.join(args.save_path, 'temp_%s' % args.arch), exist_ok=True)
 
-    class_name = 'liberaware'
+    class_name = 'bottle'
     data_path = args.data_path
     save_path = args.save_path
     arch = args.arch
@@ -51,17 +50,15 @@ def main():
     test_dataset = mvtec.MVTecDataset(data_path, class_name=class_name, is_train=False)
     test_dataloader = DataLoader(test_dataset, batch_size=32, pin_memory=True)
 
+    model = GaussianCnnPredictor(arch = args.arch)
     model.fit(train_dataloader)
-    scores = model.predict(test_dataloader)
-
-    scores = np.array(scores*255, np.uint8)
+    heatmaps = model.predict(test_dataloader)
 
     test_imgs = []
-    # extract test set features
     for (x, _) in test_dataloader:
         test_imgs.extend(x.cpu().detach().numpy())
 
-    plot_fig(test_imgs, scores, num = 50)
+    plot_fig(test_imgs, heatmaps, num = 50)
 
 
 #     # calculate image-level ROC AUC score
@@ -153,14 +150,6 @@ def plot_fig(test_imgs: List, scores: np.array, num: int):
 
 #         fig_img.savefig(os.path.join(save_dir, class_name + '_{}'.format(i)), dpi=100)
 #         plt.close()
-
-
-def denormalization(x):
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
-    x = (((x.transpose(1, 2, 0) * std) + mean) * 255.).astype(np.uint8)
-    
-    return x
 
 
 if __name__ == '__main__':
