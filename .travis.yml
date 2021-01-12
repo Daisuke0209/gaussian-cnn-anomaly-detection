@@ -1,5 +1,10 @@
 language: python
 python: 3.7
-script: python -m unittest discover
+install:
+  - pip install poetry
+  - poetry config virtualenvs.in-project true
+  - poetry run pip install --upgrade pip
+  - poetry install
+script: poetry run python -m unittest discover
 notifications:
   slack: aidevelopmenttalk:9jm0dfq6ZXnLhWUBSWtsjhz1
