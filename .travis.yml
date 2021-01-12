@@ -1,0 +1,12 @@
+language: python
+python: 3.7
+install:
+  - apt-get update
+  - apt-get install --no-install-recommends -y fonts-ipaexfont libglib2.0-0 libsm6 libxrender1 libxext6 git gcc
+  - apt-get clean
+  - rm -rf /var/lib/apt/lists/*
+  - pip install --upgrade pip
+  - pip install -r requirements.txt
+script: python -m unittest discover
+notifications:
+  slack: aidevelopmenttalk:9jm0dfq6ZXnLhWUBSWtsjhz1
