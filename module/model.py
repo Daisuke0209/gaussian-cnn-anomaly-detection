@@ -119,9 +119,9 @@ class GaussianCnnPredictor():
         # Normalization
         max_score = score_map.max()
         min_score = score_map.min()
-        scores = (score_map - min_score) / (max_score - min_score)
-
-        return scores
+        heatmaps = (score_map - min_score) / (max_score - min_score)
+        heatmaps = np.array(heatmaps*255, np.uint8)
+        return heatmaps
 
 
 def embedding_concat(x, y):

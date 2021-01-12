@@ -5,3 +5,5 @@
 __pycache__
 
 mvtec_anomaly_detection
+
+.ipynb_checkpoints
