@@ -17,13 +17,14 @@ CLASS_NAMES = ['liberaware', 'bottle', 'bottle-small', 'cable', 'capsule', 'carp
 
 class MVTecDataset(Dataset):
     def __init__(self, dataset_path='D:/dataset/mvtec_anomaly_detection', class_name='bottle', is_train=True,
-                 resize=256, cropsize=224):
+                 resize=256, cropsize=224, ext = '.png'):
         assert class_name in CLASS_NAMES, 'class_name: {}, should be in {}'.format(class_name, CLASS_NAMES)
         self.dataset_path = dataset_path
         self.class_name = class_name
         self.is_train = is_train
         self.resize = resize
         self.cropsize = cropsize
+        self.ext = ext
         # self.mvtec_folder_path = os.path.join(root_path, 'mvtec_anomaly_detection')
 
         # download dataset if not exist
@@ -69,7 +70,7 @@ class MVTecDataset(Dataset):
                 continue
             img_fpath_list = sorted([os.path.join(img_type_dir, f)
                                      for f in os.listdir(img_type_dir)
-                                     if f.endswith('.jpg')])
+                                     if f.endswith(self.ext)])
             x.extend(img_fpath_list)
 
             # load gt labels
@@ -77,7 +78,6 @@ class MVTecDataset(Dataset):
                 y.extend([0] * len(img_fpath_list))
             else:
                 y.extend([1] * len(img_fpath_list))
-
         assert len(x) == len(y), 'number of x and y should be same'
 
         return list(x), list(y)
