@@ -16,4 +16,4 @@ class TestTools(unittest.TestCase):
         binary, bbxes, judge = tools.get_bbx(self.heatmap, threshold=100, min_detected_area=10)
         self.assertTrue(type(binary) == np.ndarray)
         self.assertTrue(type(bbxes) == list)
-        self.assertTrue(type(judge) == str)
+        self.assertTrue(type(judge) == int)
