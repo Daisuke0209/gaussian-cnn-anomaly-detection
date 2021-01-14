@@ -2,6 +2,7 @@ import random
 from random import sample
 from collections import OrderedDict
 from tqdm import tqdm
+import gc
 import numpy as np
 from scipy.spatial.distance import mahalanobis
 from scipy.ndimage import gaussian_filter
@@ -74,7 +75,7 @@ class GaussianCnnPredictor():
                 train_outputs[k].append(v.cpu().detach())
             # initialize hook outputs
             self.outputs = []
-        
+        print("feature extraction done")
         for k, v in train_outputs.items():
             train_outputs[k] = torch.cat(v, 0)
 
@@ -84,14 +85,16 @@ class GaussianCnnPredictor():
         embedding_vectors = train_outputs['layer1']
         for layer_name in ['layer2', 'layer3']:
             embedding_vectors = embedding_concat(embedding_vectors, train_outputs[layer_name])
+        print("combined embedding features")
+        del train_outputs
+        gc.collect()
 
-         # randomly select d dimension
+        # randomly select d dimension
         embedding_vectors = torch.index_select(embedding_vectors, 1, self.idx)
+        print("selected embedding features")
         # calculate multivariate Gaussian distribution
         B, C, H, W = embedding_vectors.size()
         embedding_vectors = embedding_vectors.view(B, C, H * W)
-
-        print(type(embedding_vectors))
 
         return embedding_vectors, B, C, H, W
 
@@ -107,6 +110,7 @@ class GaussianCnnPredictor():
         print("fit start")
         embedding_vectors, B, C, H, W = self.get_embedding(dataloader)
         print("got embedding")
+        # Average over the entire input images
         mean = torch.mean(embedding_vectors, dim=0).numpy()
         cov = torch.zeros(C, C, H * W).numpy()
         I = np.identity(C)
@@ -114,6 +118,10 @@ class GaussianCnnPredictor():
         for i in tqdm(range(H * W)):
             # cov[:, :, i] = LedoitWolf().fit(embedding_vectors[:, :, i].numpy()).covariance_
             cov[:, :, i] = np.cov(embedding_vectors[:, :, i].numpy(), rowvar=False) + 0.01 * I
+        
+        del embedding_vectors
+        gc.collect()
+
         # save learned distribution
         self.train_outputs = [mean, cov]
 
@@ -136,12 +144,16 @@ class GaussianCnnPredictor():
         print("got embedding")
         embedding_vectors = embedding_vectors.numpy()
 
+        # calcurate mahalanobis distance from OK feature distributions
         dist_list = []
         for i in tqdm(range(H * W)):
             mean = self.train_outputs[0][:, i]
             conv_inv = np.linalg.inv(self.train_outputs[1][:, :, i])
             dist = [mahalanobis(sample[:, i], mean, conv_inv) for sample in embedding_vectors]
             dist_list.append(dist)
+        print("got distances")
+        del embedding_vectors
+        gc.collect()
 
         dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)
 
@@ -149,7 +161,8 @@ class GaussianCnnPredictor():
         dist_list = torch.tensor(dist_list)
         score_map = F.interpolate(dist_list.unsqueeze(1), size=self.size, mode='bilinear',
                                     align_corners=False).squeeze().numpy()
-        
+
+        del dist_list
         # apply gaussian smoothing on the score map
         for i in range(score_map.shape[0]):
             score_map[i] = gaussian_filter(score_map[i], sigma=4)
@@ -164,7 +177,7 @@ class GaussianCnnPredictor():
 
 def embedding_concat(x, y):
     """embedding_concat
-    Combine the two inputs
+    Combine the two input tensors
 
     Parameters
     -------

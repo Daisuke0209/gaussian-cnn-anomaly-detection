@@ -21,8 +21,8 @@ def get_bbx(heatmap : np.array, threshold : int = 0, min_detected_area : int = 0
         Binarization of heatmap
     bbxes : List[Dict]
         Bounding boxes in the abnormal area
-    judge : str
-        OK or NG
+    judge : int
+        0(OK) or 1(NG)
     """
     _, binary = cv2.threshold(heatmap, threshold, 255, cv2.THRESH_BINARY)
     _, _, stats, _ = cv2.connectedComponentsWithStats(binary)
@@ -41,10 +41,40 @@ def get_bbx(heatmap : np.array, threshold : int = 0, min_detected_area : int = 0
                 )
     judge = None
     if len(bbxes) == 0:
-        judge = 'OK'
+        judge = 0
     else:
-        judge = 'NG'
+        judge = 1
     return binary, bbxes, judge
+
+def get_bbxes(heatmaps : np.array, threshold : int = 0, min_detected_area : int = 0):
+    """get_bbxes
+    get bounding boxes from heatmaps
+
+    Parameters
+    -------
+    heatmaps : np.array
+        Heatmaps which are made by GaussianCnnPredictor
+    threshold : int
+        Areas below threshold will not be bouneding boxes
+    min_detected_area : 
+        Bouneding boxes below min_detected_area will not be returned
+
+    Returns
+    -------
+    binary : List[np.array]
+        Binarization of heatmap
+    bbxes : List[List[Dict]]
+        Bounding boxes in the abnormal area
+    judge : List[int]
+        0(OK) or 1(NG)
+    """
+    binaries, bbxes, judges = [], [], []
+    for heatmap in heatmaps:
+        binary, bbx, judge = get_bbx(heatmap, threshold, min_detected_area)
+        binaries.append(binary)
+        bbxes.append(bbx)
+        judges.append(judge)
+    return binaries, bbxes, judges
 
 def draw_bbx(img : np.array, bbxes : List[Dict]):
     """draw_bbx

@@ -2,6 +2,7 @@ import random
 from random import sample
 import argparse
 from typing import List
+import itertools
 import numpy as np
 import os
 import cv2
@@ -12,18 +13,15 @@ from collections import OrderedDict
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import roc_curve
 from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import confusion_matrix
 from sklearn.covariance import LedoitWolf
 from skimage.segmentation import mark_boundaries
 import matplotlib.pyplot as plt
 import matplotlib
 from torch.utils.data import DataLoader
 from module.model import GaussianCnnPredictor
-from module.tools import get_bbx, denormalization
+from module.tools import get_bbxes, denormalization
 import datasets.mvtec as mvtec
-
-
-
-
 
 def parse_args():
     parser = argparse.ArgumentParser('PaDiM')
@@ -45,18 +43,24 @@ def main():
     save_path = args.save_path
     arch = args.arch
 
-    train_dataset = mvtec.MVTecDataset(data_path, class_name=class_name, is_train=True)
+    train_dataset = mvtec.MVTecDataset(data_path, class_name=class_name, is_train=True, ext = '.png')
     train_dataloader = DataLoader(train_dataset, batch_size=32, pin_memory=True)
-    test_dataset = mvtec.MVTecDataset(data_path, class_name=class_name, is_train=False)
+    test_dataset = mvtec.MVTecDataset(data_path, class_name=class_name, is_train=False, ext = '.png')
     test_dataloader = DataLoader(test_dataset, batch_size=32, pin_memory=True)
 
     model = GaussianCnnPredictor(arch = args.arch)
     model.fit(train_dataloader)
     heatmaps = model.predict(test_dataloader)
 
-    test_imgs = []
-    for (x, _) in test_dataloader:
+    binaries, bbxes, judges = get_bbxes(heatmaps, 50, 0)
+
+    test_imgs, labels = [], []
+    for (x, y) in test_dataloader:
         test_imgs.extend(x.cpu().detach().numpy())
+        labels.append(y.cpu().detach().numpy().tolist())
+    labels = list(itertools.chain.from_iterable(labels))
+
+    print(confusion_matrix(labels, judges))
 
     plot_fig(test_imgs, heatmaps, num = 50)
 
