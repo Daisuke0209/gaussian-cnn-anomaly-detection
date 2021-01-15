@@ -21,7 +21,7 @@ import matplotlib
 from torch.utils.data import DataLoader
 from module.model import GaussianCnnPredictor
 from module.tools import get_bbxes, denormalization
-import datasets.mvtec as mvtec
+import module.mvtec as mvtec
 
 def parse_args():
     parser = argparse.ArgumentParser('PaDiM')
@@ -38,7 +38,7 @@ def main():
 
     os.makedirs(os.path.join(args.save_path, 'temp_%s' % args.arch), exist_ok=True)
 
-    class_name = 'bottle'
+    class_name = 'toothbrush'
     data_path = args.data_path
     save_path = args.save_path
     arch = args.arch
