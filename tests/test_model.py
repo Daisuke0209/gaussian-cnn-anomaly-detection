@@ -4,12 +4,12 @@ sys.path.append('..')
 import numpy as np
 from torch.utils.data import DataLoader
 from module.model import GaussianCnnPredictor
-import datasets.mvtec as mvtec
+import module.mvtec as mvtec
 
 
 class TestPredictor(unittest.TestCase):
     def setUp(self):
-        self.data_path = 'datasets/test_dataset'
+        self.data_path = 'test_dataset'
         self.class_name = 'bottle-small'
         self.arch = 'resnet18'
 
