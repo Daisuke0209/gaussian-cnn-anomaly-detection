@@ -4,6 +4,7 @@
 
 __pycache__
 
-mvtec_anomaly_detection
+datasets
+mvtec_result
 
 .ipynb_checkpoints

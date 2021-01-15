@@ -1,8 +1,9 @@
 import random
 from random import sample
 from collections import OrderedDict
-from tqdm import tqdm
 import gc
+import cv2
+from tqdm import tqdm
 import numpy as np
 from scipy.spatial.distance import mahalanobis
 from scipy.ndimage import gaussian_filter
@@ -83,11 +84,13 @@ class GaussianCnnPredictor():
 
         # Embedding concat
         embedding_vectors = train_outputs['layer1']
+        del train_outputs['layer1']
+        gc.collect()
         for layer_name in ['layer2', 'layer3']:
             embedding_vectors = embedding_concat(embedding_vectors, train_outputs[layer_name])
+            del train_outputs[layer_name]
+            gc.collect()
         print("combined embedding features")
-        del train_outputs
-        gc.collect()
 
         # randomly select d dimension
         embedding_vectors = torch.index_select(embedding_vectors, 1, self.idx)
@@ -151,17 +154,22 @@ class GaussianCnnPredictor():
             conv_inv = np.linalg.inv(self.train_outputs[1][:, :, i])
             dist = [mahalanobis(sample[:, i], mean, conv_inv) for sample in embedding_vectors]
             dist_list.append(dist)
+        print(f'dist[0]: {dist[0]}')
+        print(f'len(dist): {len(dist)}')
+        print(f'len(dist_list): {len(dist_list)}')
+        
         print("got distances")
         del embedding_vectors
         gc.collect()
 
         dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)
+        print(f'dist_list.shape: {dist_list.shape}')
 
         # upsample
         dist_list = torch.tensor(dist_list)
         score_map = F.interpolate(dist_list.unsqueeze(1), size=self.size, mode='bilinear',
                                     align_corners=False).squeeze().numpy()
-
+        print(f'score_map.shape: {score_map.shape}')
         del dist_list
         # apply gaussian smoothing on the score map
         for i in range(score_map.shape[0]):

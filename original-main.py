@@ -21,7 +21,7 @@ import matplotlib
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision.models import wide_resnet50_2, resnet18
-import datasets.mvtec as mvtec
+import module.original_mvtec as mvtec
 
 
 # device setup
@@ -33,7 +33,7 @@ def parse_args():
     parser = argparse.ArgumentParser('PaDiM')
     parser.add_argument('--data_path', type=str, default='datasets/mvtec_anomaly_detection')
     parser.add_argument('--save_path', type=str, default='./mvtec_result')
-    parser.add_argument('--arch', type=str, choices=['resnet18', 'wide_resnet50_2'], default='resnet18')
+    parser.add_argument('--arch', type=str, choices=['resnet18', 'wide_resnet50_2'], default='wide_resnet50_2')
     return parser.parse_args()
 
 
@@ -193,11 +193,14 @@ def main():
         # get optimal threshold
         gt_mask = np.asarray(gt_mask_list)
         precision, recall, thresholds = precision_recall_curve(gt_mask.flatten(), scores.flatten())
+        print(f'precision: {precision}')
+        print(f'recall: {recall}')
         a = 2 * precision * recall
         b = precision + recall
         f1 = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
         threshold = thresholds[np.argmax(f1)]
-
+        print(f'threshold: {threshold}')
+        threshold = threshold*1.3
         # calculate per-pixel level ROCAUC
         fpr, tpr, _ = roc_curve(gt_mask.flatten(), scores.flatten())
         per_pixel_rocauc = roc_auc_score(gt_mask.flatten(), scores.flatten())
