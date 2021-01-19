@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 from scipy.spatial.distance import mahalanobis
 from scipy.ndimage import gaussian_filter
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -17,7 +18,12 @@ class GaussianCnnPredictor():
     """
     This class detect anomaly in input image using Cnn and Gaussian
     """
-    def __init__(self, arch: str):
+    def __init__(
+        self, 
+        arch: str,
+        feature_selection : bool = True,
+        similarity : float = 0.5
+        ):
         # device setup
         self.use_cuda = torch.cuda.is_available()
         self.device = torch.device('cuda' if self.use_cuda else 'cpu')
@@ -39,7 +45,10 @@ class GaussianCnnPredictor():
         if self.use_cuda:
             torch.cuda.manual_seed_all(1024)
 
-        self.idx = torch.tensor(sample(range(0, t_d), d))
+        self.feature_selection = feature_selection
+        self.similarity = similarity
+        if self.feature_selection is False:
+            self.idx = torch.tensor(sample(range(0, t_d), d))
 
         self.outputs = []
 
@@ -50,7 +59,7 @@ class GaussianCnnPredictor():
         self.model.layer2[-1].register_forward_hook(hook)
         self.model.layer3[-1].register_forward_hook(hook)
 
-    def get_embedding(self, dataloader: DataLoader):
+    def get_embedding(self, dataloader: DataLoader, is_fit: bool = False):
         """get_embedding
         get embeddings as image feature using pretrained CNN
 
@@ -92,14 +101,35 @@ class GaussianCnnPredictor():
             gc.collect()
         print("combined embedding features")
 
+        print(f'embedding_vectors.size: {embedding_vectors.size()}')
+        np_embedding_vectors = np.array(embedding_vectors)
+        if self.feature_selection:
+            if is_fit:
+                shape = np_embedding_vectors[0].shape
+                reshaped_vectors = np_embedding_vectors[0].reshape(shape[0], shape[1]*shape[2])
+                indices = []
+                for l, vector in enumerate(reshaped_vectors):
+                    if l == 0:
+                        indices.append(l)
+                    else:
+                        di = [cos_sim(reshaped_vectors[index], vector) for index in indices]
+                        if np.max(di) < self.similarity: indices.append(l) 
+                print(f'number of features: {len(indices)}')
+                self.idx = torch.tensor(indices)
+
         # randomly select d dimension
-        embedding_vectors = torch.index_select(embedding_vectors, 1, self.idx)
+        tensor_embedding_vectors = torch.index_select(embedding_vectors, 1, self.idx)
+        del embedding_vectors
+        gc.collect()
+
+        # embedding_vectors = torch.from_numpy(embeddings.astype(np.float32)).clone()
+
         print("selected embedding features")
         # calculate multivariate Gaussian distribution
-        B, C, H, W = embedding_vectors.size()
-        embedding_vectors = embedding_vectors.view(B, C, H * W)
+        B, C, H, W = tensor_embedding_vectors.size()
+        tensor_embedding_vectors = tensor_embedding_vectors.view(B, C, H * W)
 
-        return embedding_vectors, B, C, H, W
+        return tensor_embedding_vectors, B, C, H, W
 
     def fit(self, dataloader: DataLoader):
         """fit
@@ -111,7 +141,7 @@ class GaussianCnnPredictor():
             Dataset to get embeddings
         """
         print("fit start")
-        embedding_vectors, B, C, H, W = self.get_embedding(dataloader)
+        embedding_vectors, B, C, H, W = self.get_embedding(dataloader, is_fit = True)
         print("got embedding")
         # Average over the entire input images
         mean = torch.mean(embedding_vectors, dim=0).numpy()
@@ -154,22 +184,17 @@ class GaussianCnnPredictor():
             conv_inv = np.linalg.inv(self.train_outputs[1][:, :, i])
             dist = [mahalanobis(sample[:, i], mean, conv_inv) for sample in embedding_vectors]
             dist_list.append(dist)
-        print(f'dist[0]: {dist[0]}')
-        print(f'len(dist): {len(dist)}')
-        print(f'len(dist_list): {len(dist_list)}')
         
         print("got distances")
         del embedding_vectors
         gc.collect()
 
         dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)
-        print(f'dist_list.shape: {dist_list.shape}')
 
         # upsample
         dist_list = torch.tensor(dist_list)
         score_map = F.interpolate(dist_list.unsqueeze(1), size=self.size, mode='bilinear',
                                     align_corners=False).squeeze().numpy()
-        print(f'score_map.shape: {score_map.shape}')
         del dist_list
         # apply gaussian smoothing on the score map
         for i in range(score_map.shape[0]):
@@ -211,3 +236,6 @@ def embedding_concat(x, y):
     z = F.fold(z, kernel_size=s, output_size=(H1, W1), stride=s)
 
     return z
+
+def cos_sim(v1, v2):
+    return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))

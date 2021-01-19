@@ -22,11 +22,21 @@ class TestPredictor(unittest.TestCase):
         test_dataset = mvtec.MVTecDataset(self.data_path, class_name=self.class_name, is_train=False)
         test_dataloader = DataLoader(test_dataset, batch_size=2, pin_memory=True)
 
-        model = GaussianCnnPredictor(arch = self.arch)
+        model = GaussianCnnPredictor(arch = self.arch, feature_selection = False)
         model.fit(train_dataloader)
         heatmaps = model.predict(test_dataloader)
 
         self.assertTrue(np.abs(np.average(heatmaps[0]) - 73.10817920918367) < 1e-6)
         self.assertTrue(np.abs(np.average(heatmaps[1]) - 82.39164142219387) < 1e-6)
+
+        model = GaussianCnnPredictor(arch = self.arch, similarity=0.2)
+        model.fit(train_dataloader)
+        heatmaps = model.predict(test_dataloader)
+
+        self.assertTrue(np.abs(np.average(heatmaps[0]) - 32.724629304846935) < 1e-6)
+        self.assertTrue(np.abs(np.average(heatmaps[1]) - 38.394252232142854) < 1e-6)
+
+        print(np.average(heatmaps[0]))
+        print(np.average(heatmaps[1]))
 
         
